@@ -4,9 +4,6 @@ import { Application, Router } from "oak/mod.ts";
 const app = new Application();
 const router = new Router();
 
-export type LogicType = "prop";
-export const isLogicType = (type: string): type is LogicType => ["prop"].includes(type);
-
 const buildAnnictQuery = (usernames: string[]) => `
   fragment userObject on User {
     username
@@ -32,26 +29,83 @@ const cannoicalAnnictRes = (
 ): {
   animes: string[];
   users: { id: string; name: string }[];
-  status: { userId: string; animeId: string }[];
+  statuses: { userId: string; animeId: string }[];
 } => {
   return {
     animes: Object
       .values(data)
-      .reduce(
-        (p, c) => [
-          ...p,
-          ...c.works.nodes.filter(({ malAnimeId }) => !!malAnimeId).map(({ malAnimeId }) => `mal:${malAnimeId}`),
-        ],
-        [] as string[],
-      ),
+      .reduce((p, c) => [
+        ...p,
+        ...c.works.nodes.filter(({ malAnimeId }) => !!malAnimeId).map(({ malAnimeId }) => `mal:${malAnimeId}`),
+      ], [] as string[]),
     users: Object.values(data).map(({ username }) => ({ id: `annict:${username}`, name: username })),
-    status: Object
+    statuses: Object
+      .values(data)
+      .reduce((p, c) => {
+        return [
+          ...p,
+          ...c.works.nodes.filter(({ malAnimeId }) => !!malAnimeId).map(({ malAnimeId }) => ({
+            userId: `annict:${c.username}`,
+            animeId: `mal:${malAnimeId}`,
+          })),
+        ];
+      }, [] as { userId: string; animeId: string }[]),
+  };
+};
+
+const buildAnilistQuery = (usernames: string[]) => `
+  fragment mlc on MediaListCollection {
+    user {
+        name
+        avatar {
+            large
+        }
+    }
+    lists {
+        entries {
+            status
+            media {
+                idMal
+            }
+        }
+    }
+  }
+
+  query {
+    ${
+  usernames.map((username) =>
+    `${username}: MediaListCollection(userName: "${username}", type: ANIME, status:COMPLETED){...mlc}`
+  ).join(" ")
+}
+  }
+`;
+const canonicalAnilistRes = (
+  data: Record<string, {
+    user: {
+      name: string;
+      avatar: { large: string };
+    };
+    lists: [
+      { entries: { status: string; media: { idMal: number } }[] },
+    ];
+  }>,
+): {
+  animes: string[];
+  users: { id: string; name: string }[];
+  statuses: { userId: string; animeId: string }[];
+} => {
+  return {
+    animes: Object
+      .values(data)
+      .reduce((p, c) => [...p, ...c.lists[0].entries.map(({ media: { idMal } }) => `mal:${idMal}`)], [] as string[]),
+    users: Object.values(data).map(({ user: { name } }) => ({ id: `anilist:${name}`, name: name })),
+    statuses: Object
       .values(data)
       .reduce((p, c) => [
         ...p,
-        ...c.works.nodes.filter(({ malAnimeId }) => !!malAnimeId).map(({ malAnimeId }) => ({
-          userId: `annict:${c.username}`,
-          animeId: `mal:${malAnimeId}`,
+        ...c.lists[0].entries.map(({ media: { idMal } }) => ({
+          userId: `anilist:${c.user.name}`,
+          animeId: `mal:${idMal}`,
         })),
       ], [] as { userId: string; animeId: string }[]),
   };
@@ -68,6 +122,8 @@ router.get("/graph", oakCors(), async ({ request, response }) => {
           "tosuke",
           "kokoro",
           "otofune",
+          "hikahikage_",
+          "rokoucha",
         ]),
       }),
       headers: {
@@ -78,10 +134,29 @@ router.get("/graph", oakCors(), async ({ request, response }) => {
   );
   const ca = cannoicalAnnictRes((await annictResponse.json()).data);
 
+  const anilistResponse = await fetch(
+    "https://graphql.anilist.co",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        query: buildAnilistQuery([
+          "sno2wman",
+          "bakarasu",
+          "Vivy417",
+        ]),
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  const cani = canonicalAnilistRes((await anilistResponse.json()).data);
+
   response.body = {
-    animes: Array.from(new Set(ca.animes)).map((id) => ({ id })),
-    users: ca.users,
-    status: ca.status,
+    animes: Array.from(new Set([...ca.animes, ...cani.animes])).map((id) => ({ id })),
+    users: [...ca.users, ...cani.users],
+    statuses: [...ca.statuses, ...cani.statuses]
+      .filter((v, i, a) => a.findIndex((v2) => v.animeId === v2.animeId && v.userId === v2.userId) === i),
   };
 });
 app.use(router.routes());
