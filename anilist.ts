@@ -11,6 +11,9 @@ const buildAnilistQuery = (usernames: string[]) => `
               status
               media {
                   idMal
+                  title {
+                    english
+                  }
               }
           }
       }
@@ -23,7 +26,7 @@ const buildAnilistQuery = (usernames: string[]) => `
 }}`;
 
 export const fetchFromAnilist = async (names: string[]): Promise<{
-  animes: string[];
+  animes: { id: string; title: string }[];
   users: { id: string; name: string }[];
   statuses: { userId: string; animeId: string }[];
 }> => {
@@ -51,14 +54,23 @@ export const fetchFromAnilist = async (names: string[]): Promise<{
     string,
     {
       user: { name: string; avatar: { large: string } };
-      lists: [{ entries: { status: string; media: { idMal: number } }[] }];
+      lists: [{ entries: { status: string; media: { idMal: number; title: { english: string } } }[] }];
     }
   > = (await response.json()).data;
 
   return {
     animes: Object
       .values(data)
-      .reduce((p, c) => [...p, ...c.lists[0].entries.map(({ media: { idMal } }) => `mal:${idMal}`)], [] as string[]),
+      .reduce(
+        (p, c) => [
+          ...p,
+          ...c.lists[0].entries.map(({ media: { idMal, title: { english } } }) => ({
+            id: `mal:${idMal}`,
+            title: english,
+          })),
+        ],
+        [] as { id: string }[],
+      ),
     users: Object.values(data).map(({ user: { name } }) => ({ id: `anilist:${name}`, name: name })),
     statuses: Object
       .values(data)

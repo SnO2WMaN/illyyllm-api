@@ -11,6 +11,8 @@ const buildAnnictQuery = (names: string[]) => `
 
   fragment workIds on Work {
     malAnimeId
+    title
+    titleEn
   }
 
   query {
@@ -19,7 +21,7 @@ const buildAnnictQuery = (names: string[]) => `
 `;
 
 export const fetchFromAnnict = async (names: string[]): Promise<{
-  animes: string[];
+  animes: { id: string; title: string }[];
   users: { id: string; name: string }[];
   statuses: { userId: string; animeId: string }[];
 }> => {
@@ -49,7 +51,7 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
     {
       username: string;
       avatarUrl: string;
-      works: { nodes: { malAnimeId: string }[] };
+      works: { nodes: { malAnimeId: string; titleEn: string | null; title: string }[] };
     }
   > = (await response.json()).data;
 
@@ -62,9 +64,9 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
           ...p,
           ...c.works.nodes
             .filter(({ malAnimeId }) => !!malAnimeId)
-            .map(({ malAnimeId }) => `mal:${malAnimeId}`),
+            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: titleEn || title })),
         ],
-        [] as string[],
+        [] as { id: string; title: string }[],
       ),
     statuses: Object
       .values(data)
