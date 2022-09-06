@@ -67,7 +67,7 @@ export const fetchFromAnilist = async (names: string[]): Promise<FetchResult> =>
             (p, { entries }) => [
               ...p,
               ...entries.map(({ media: { idMal, title: { native, english } } }) => ({
-                id: `mal:${idMal}`,
+                id: `anime:mal:${idMal}`,
                 title: native || english,
               })),
             ],
@@ -76,7 +76,7 @@ export const fetchFromAnilist = async (names: string[]): Promise<FetchResult> =>
         ],
         [] as Anime[],
       ),
-    users: Object.values(data).map(({ user: { name } }) => ({ id: `anilist:${name}`, name: name })),
+    users: Object.values(data).map(({ user: { name } }) => ({ id: `user:anilist:${name}`, name: name })),
     statuses: Object
       .values(data)
       .reduce(
@@ -86,8 +86,8 @@ export const fetchFromAnilist = async (names: string[]): Promise<FetchResult> =>
             (p, { entries }) => [
               ...p,
               ...entries.map(({ status, media: { idMal } }) => ({
-                userId: `anilist:${c.user.name}`,
-                animeId: `mal:${idMal}`,
+                userId: `user:anilist:${c.user.name}`,
+                animeId: `anime:mal:${idMal}`,
                 status: status === "CURRENT" ? "WATCHING" as const : "WATCHED" as const,
               })),
             ],
