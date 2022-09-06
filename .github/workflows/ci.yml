@@ -4,8 +4,8 @@ on:
   push:
 
 jobs:
-  test:
-    name: test
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -14,7 +14,7 @@ jobs:
         with:
           name: sno2wman
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - run: nix-shell --run "deno task test"
+      - run: nix-shell --run "deno task lint"
 
   treefmt:
     name: treefmt
