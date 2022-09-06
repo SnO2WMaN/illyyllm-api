@@ -51,7 +51,7 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
     {
       username: string;
       avatarUrl: string;
-      works: { nodes: { malAnimeId: string; titleEn: string | null; title: string }[] };
+      works: { nodes: { malAnimeId: string; titleEn: string; title: string }[] };
     }
   > = (await response.json()).data;
 
@@ -64,7 +64,7 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
           ...p,
           ...c.works.nodes
             .filter(({ malAnimeId }) => !!malAnimeId)
-            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: titleEn || title })),
+            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: title || titleEn })),
         ],
         [] as { id: string; title: string }[],
       ),

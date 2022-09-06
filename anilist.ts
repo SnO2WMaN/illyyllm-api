@@ -12,6 +12,7 @@ const buildAnilistQuery = (usernames: string[]) => `
               media {
                   idMal
                   title {
+                    native
                     english
                   }
               }
@@ -54,7 +55,7 @@ export const fetchFromAnilist = async (names: string[]): Promise<{
     string,
     {
       user: { name: string; avatar: { large: string } };
-      lists: [{ entries: { status: string; media: { idMal: number; title: { english: string } } }[] }];
+      lists: [{ entries: { status: string; media: { idMal: number; title: { native: string; english: string } } }[] }];
     }
   > = (await response.json()).data;
 
@@ -64,12 +65,12 @@ export const fetchFromAnilist = async (names: string[]): Promise<{
       .reduce(
         (p, c) => [
           ...p,
-          ...c.lists[0].entries.map(({ media: { idMal, title: { english } } }) => ({
+          ...c.lists[0].entries.map(({ media: { idMal, title: { native, english } } }) => ({
             id: `mal:${idMal}`,
-            title: english,
+            title: native || english,
           })),
         ],
-        [] as { id: string }[],
+        [] as { id: string; title: string }[],
       ),
     users: Object.values(data).map(({ user: { name } }) => ({ id: `anilist:${name}`, name: name })),
     statuses: Object
