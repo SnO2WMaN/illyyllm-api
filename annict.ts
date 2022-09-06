@@ -1,15 +1,22 @@
+import { FetchResult, Status } from "./types.ts";
+
 const buildAnnictQuery = (names: string[]) => `
   fragment userObject on User {
     username
     avatarUrl
-    works(state: WATCHED){
+    watched: works(state: WATCHED){
       nodes {
-        ...workIds
+        ...work
+      }
+    }
+    watching: works(state: WATCHING){
+      nodes{
+        ...work
       }
     }
   }
 
-  fragment workIds on Work {
+  fragment work on Work {
     malAnimeId
     title
     titleEn
@@ -20,11 +27,7 @@ const buildAnnictQuery = (names: string[]) => `
   }
 `;
 
-export const fetchFromAnnict = async (names: string[]): Promise<{
-  animes: { id: string; title: string }[];
-  users: { id: string; name: string }[];
-  statuses: { userId: string; animeId: string }[];
-}> => {
+export const fetchFromAnnict = async (names: string[]): Promise<FetchResult> => {
   if (names.length <= 0) {
     return {
       animes: [],
@@ -51,7 +54,8 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
     {
       username: string;
       avatarUrl: string;
-      works: { nodes: { malAnimeId: string; titleEn: string; title: string }[] };
+      watching: { nodes: { malAnimeId: string; titleEn: string; title: string }[] };
+      watched: { nodes: { malAnimeId: string; titleEn: string; title: string }[] };
     }
   > = (await response.json()).data;
 
@@ -62,7 +66,10 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
       .reduce(
         (p, c) => [
           ...p,
-          ...c.works.nodes
+          ...c.watching.nodes
+            .filter(({ malAnimeId }) => !!malAnimeId)
+            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: title || titleEn })),
+          ...c.watched.nodes
             .filter(({ malAnimeId }) => !!malAnimeId)
             .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: title || titleEn })),
         ],
@@ -74,15 +81,23 @@ export const fetchFromAnnict = async (names: string[]): Promise<{
         (p, c) => {
           return [
             ...p,
-            ...c.works.nodes
+            ...c.watching.nodes
               .filter(({ malAnimeId }) => !!malAnimeId)
               .map(({ malAnimeId }) => ({
                 userId: `annict:${c.username}`,
                 animeId: `mal:${malAnimeId}`,
+                status: "WATCHING" as const,
+              })),
+            ...c.watched.nodes
+              .filter(({ malAnimeId }) => !!malAnimeId)
+              .map(({ malAnimeId }) => ({
+                userId: `annict:${c.username}`,
+                animeId: `mal:${malAnimeId}`,
+                status: "WATCHED" as const,
               })),
           ];
         },
-        [] as { userId: string; animeId: string }[],
+        [] as Status[],
       ),
   };
 };
