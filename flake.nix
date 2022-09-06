@@ -21,7 +21,7 @@
   } @ inputs:
     flake-utils.lib.eachDefaultSystem (
       system: let
-          pkgs = import nixpkgs {
+        pkgs = import nixpkgs {
           inherit system;
           overlays = with inputs; [
             devshell.overlay
