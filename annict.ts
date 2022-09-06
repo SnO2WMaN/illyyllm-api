@@ -60,7 +60,7 @@ export const fetchFromAnnict = async (names: string[]): Promise<FetchResult> => 
   > = (await response.json()).data;
 
   return {
-    users: Object.values(data).map(({ username }) => ({ id: `annict:${username}`, name: username })),
+    users: Object.values(data).map(({ username }) => ({ id: `user:annict:${username}`, name: username })),
     animes: Object
       .values(data)
       .reduce(
@@ -68,10 +68,10 @@ export const fetchFromAnnict = async (names: string[]): Promise<FetchResult> => 
           ...p,
           ...c.watching.nodes
             .filter(({ malAnimeId }) => !!malAnimeId)
-            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: title || titleEn })),
+            .map(({ malAnimeId, titleEn, title }) => ({ id: `anime:mal:${malAnimeId}`, title: title || titleEn })),
           ...c.watched.nodes
             .filter(({ malAnimeId }) => !!malAnimeId)
-            .map(({ malAnimeId, titleEn, title }) => ({ id: `mal:${malAnimeId}`, title: title || titleEn })),
+            .map(({ malAnimeId, titleEn, title }) => ({ id: `anime:mal:${malAnimeId}`, title: title || titleEn })),
         ],
         [] as { id: string; title: string }[],
       ),
@@ -84,15 +84,15 @@ export const fetchFromAnnict = async (names: string[]): Promise<FetchResult> => 
             ...c.watching.nodes
               .filter(({ malAnimeId }) => !!malAnimeId)
               .map(({ malAnimeId }) => ({
-                userId: `annict:${c.username}`,
-                animeId: `mal:${malAnimeId}`,
+                userId: `user:annict:${c.username}`,
+                animeId: `anime:mal:${malAnimeId}`,
                 status: "WATCHING" as const,
               })),
             ...c.watched.nodes
               .filter(({ malAnimeId }) => !!malAnimeId)
               .map(({ malAnimeId }) => ({
-                userId: `annict:${c.username}`,
-                animeId: `mal:${malAnimeId}`,
+                userId: `user:annict:${c.username}`,
+                animeId: `anime:mal:${malAnimeId}`,
                 status: "WATCHED" as const,
               })),
           ];
